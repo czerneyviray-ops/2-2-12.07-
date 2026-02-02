@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ระบบเบิกจ่าย Pro | PEA Asset Cloud</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@4.1.1/dist/tesseract.min.js'></script>
+    
+    <style>
+        :root { 
+            --p-main: #720e9e; 
+            --p-grad: linear-gradient(135deg, #720e9e 0%, #9d46c1 100%); 
+            --bg: #f0f2f5; 
+        }
+        body { font-family: 'Kanit', sans-serif; background: var(--bg); color: #495057; padding-bottom: 100px; }
+        .hidden { display: none !important; }
+        
+        /* UI Components */
+        .glass-nav { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+        .shadow-soft { box-shadow: 0 4px 20px rgba(0,0,0,0.04); }
+        .rounded-xl { border-radius: 16px; }
+        .rounded-xxl { border-radius: 24px; }
+
+        /* Dashboard Stats */
+        .stat-card { 
+            border-radius: 20px; padding: 20px 15px; color: white; position: relative; overflow: hidden; 
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15); cursor: pointer; transition: transform 0.2s; border: none;
+        }
+        .stat-card:active { transform: scale(0.96); }
+        .stat-card h2 { font-weight: 600; font-size: 2.5rem; margin-bottom: 0; line-height: 1; text-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .stat-card small { opacity: 0.9; font-weight: 400; font-size: 0.9rem; }
+        .bg-grad-purple { background: linear-gradient(135deg, #720e9e 0%, #a64bf4 100%); }
+        .bg-grad-green { background: linear-gradient(135deg, #00b09b 0%, #96c93d 100%); }
+        .bg-grad-orange { background: linear-gradient(135deg, #fce38a 0%, #f38181 100%); color: #fff; }
+
+        /* Item Card */
+        .item-card { 
+            background: white; border-radius: 20px; overflow: hidden; position: relative; border: 2px solid transparent;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03); transition: all 0.2s; height: 100%;
+        }
+        .item-card.selected-return { border-color: #198754; background-color: #f0fdf4; } 
+        
+        .item-img-container {
+            width: 100%; height: 180px; background: #f8f9fa; position: relative; overflow: hidden;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .item-real-img { width: 100%; height: 100%; object-fit: cover; }
+        .item-placeholder-icon { font-size: 4rem; color: #e9ecef; }
+
+        /* Status Badge */
+        .status-badge { 
+            position: absolute; top: 12px; right: 12px; z-index: 10; 
+            padding: 5px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 600;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); backdrop-filter: blur(4px);
+        }
+        .badge-avail { background: rgba(255,255,255,0.9); color: #198754; }
+        .badge-borrow { background: rgba(255,255,255,0.9); color: #fd7e14; }
+        .badge-late { background: #dc3545; color: white; }
+
+        /* Floating Buttons Container */
+        .fab-container { position: fixed; bottom: 30px; right: 30px; z-index: 1060; display: flex; flex-direction: column; gap: 15px; align-items: end; }
+        
+        .fab-btn {
+            width: 65px; height: 65px; border-radius: 50%; color: white;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25); font-size: 26px; transition: transform 0.2s; border: none; position: relative;
+        }
+        .fab-btn:active { transform: scale(0.9); }
+        .fab-borrow { background: var(--p-main); }
+        .fab-return { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+        
+        .cart-badge { 
+            position: absolute; top: -5px; right: -5px; background: #ff3b30; color: white; 
+            width: 26px; height: 26px; border-radius: 50%; font-size: 12px; 
+            display: flex; align-items: center; justify-content: center; border: 3px solid #f4f6f9; 
+        }
+
+        /* Chips */
+        .chip-container { overflow-x: auto; white-space: nowrap; padding: 5px 2px 15px 2px; scrollbar-width: none; }
+        .chip-btn { border: 1px solid #e9ecef; background: white; color: #6c757d; border-radius: 50px; padding: 8px 20px; margin-right: 8px; font-size: 0.9rem; transition: 0.2s; }
+        .chip-btn.active { background: var(--p-main); color: white; border-color: var(--p-main); box-shadow: 0 4px 10px rgba(114, 14, 158, 0.2); }
+
+        /* Forms & Misc */
+        .auth-bg { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: white; }
+        .form-control-modern { background: #f8f9fa; border: 1px solid transparent; padding: 14px; border-radius: 14px; }
+        .btn-main { background: var(--p-grad); border: none; color: white; border-radius: 14px; padding: 12px; font-weight: 500; width: 100%; box-shadow: 0 4px 15px rgba(114, 14, 158, 0.2); }
+        .avatar-option { width: 55px; height: 55px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; background-size: cover; }
+        .avatar-option.selected { border-color: var(--p-main); transform: scale(1.1); }
+        .user-avatar-sm { width: 40px; height: 40px; border-radius: 50%; background-size: cover; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .cat-line { height: 4px; width: 100%; }
+        .cat-it { background: #0dcaf0; } .cat-radio { background: #6610f2; }
+        .cat-tool { background: #fd7e14; } .cat-car { background: #198754; } .cat-other { background: #adb5bd; }
+        
+        /* Required field asterisk */
+        .req { color: #dc3545; font-weight: bold; margin-left: 3px; }
+    </style>
+</head>
+<body>
+
+    <div id="page-login" class="auth-bg">
+        <div class="text-center p-4" style="max-width:420px; width:100%;">
+            <div class="mb-5 d-inline-block">
+                <div class="bg-grad-purple text-white rounded-xxl d-flex align-items-center justify-content-center shadow-lg mx-auto mb-3" style="width:80px; height:80px; font-size:40px; transform: rotate(-5deg);"><i class="bi bi-lightning-charge-fill"></i></div>
+                <h2 class="fw-bold mb-0" style="color:var(--p-main); letter-spacing: -1px;">PEA ASSET</h2>
+                <small class="text-muted text-uppercase" style="letter-spacing:3px; font-size: 0.8rem;">Smart Cloud System</small>
+            </div>
+            <div class="d-flex flex-column gap-3 text-start">
+                <input id="login-email" class="form-control-modern form-control" placeholder="user@pea.co.th">
+                <input id="login-pass" type="password" class="form-control-modern form-control" placeholder="••••••••" onkeyup="if(event.key==='Enter') doLogin()">
+                <button id="btn-login-action" class="btn-main mt-3" onclick="doLogin()">เข้าสู่ระบบ</button>
+                <div class="text-center mt-4">
+                    <button class="btn btn-link text-primary small text-decoration-none fw-bold" onclick="goRegister()">ลงทะเบียนใหม่</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="page-register" class="auth-bg hidden">
+        <div class="p-4 text-center" style="max-width:550px; width:100%;">
+            <div class="text-start mb-4">
+                <button class="btn btn-light rounded-circle shadow-sm" onclick="goLogin()"><i class="bi bi-arrow-left"></i></button>
+                <span class="fw-bold ms-2 fs-5">ลงทะเบียน</span>
+            </div>
+            <div class="mb-4">
+                <div class="d-flex justify-content-center gap-3 flex-wrap" id="reg-avatar-list"></div>
+                <input type="hidden" id="reg-avatar-val" value="boy">
+            </div>
+            <div class="row g-3 text-start">
+                <div class="col-6"><input id="reg-id" class="form-control-modern form-control" placeholder="รหัสพนักงาน"></div>
+                <div class="col-6"><input id="reg-name" class="form-control-modern form-control" placeholder="ชื่อ-นามสกุล"></div>
+                <div class="col-6"><input id="reg-phone" class="form-control-modern form-control" placeholder="เบอร์โทร"></div>
+                <div class="col-6">
+                    <select id="reg-branch" class="form-control-modern form-select">
+                        <option value="กฟต.1">กฟต.1</option><option value="กฟจ.เพชรบุรี">กฟจ.เพชรบุรี</option>
+                        <option value="กฟอ.ชะอำ">กฟอ.ชะอำ</option><option value="กฟอ.ท่ายาง">กฟอ.ท่ายาง</option>
+                    </select>
+                </div>
+                <div class="col-12"><input id="reg-email" class="form-control-modern form-control" placeholder="อีเมล"></div>
+                <div class="col-12"><input id="reg-pass" type="password" class="form-control-modern form-control" placeholder="กำหนดรหัสผ่าน"></div>
+                <div class="col-12">
+                    <select id="reg-dept" class="form-control-modern form-select">
+                        <option value="" disabled selected>-- เลือกแผนก --</option>
+                        <option value="มิเตอร์">มิเตอร์</option><option value="ไอที">ไอที</option><option value="คลังพัสดุ">คลังพัสดุ</option><option value="ก่อสร้าง">ก่อสร้าง</option><option value="บัญชี">บัญชี</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn-main mt-4" onclick="doRegister()">ยืนยัน</button>
+        </div>
+    </div>
+
+    <div id="page-main" class="hidden">
+        <div class="glass-nav sticky-top py-3 mb-4">
+            <div class="container d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                    <div class="bg-grad-purple text-white rounded-xl d-flex align-items-center justify-content-center me-3 shadow-sm" style="width:42px; height:42px; font-size:20px;"><i class="bi bi-lightning-charge-fill"></i></div>
+                    <div style="line-height:1.2;">
+                        <span class="fw-bold text-dark" style="font-size:1.1rem; letter-spacing:-0.5px;">PEA ASSET</span>
+                        <small class="d-block text-muted" style="font-size:0.65rem; letter-spacing:1px;">PRO SYSTEM</small>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="d-flex align-items-center p-1 pe-3 rounded-pill bg-white border shadow-sm" onclick="openProfile()" style="cursor: pointer;">
+                        <div id="nav-avatar" class="user-avatar-sm me-2"></div>
+                        <div id="nav-user" class="fw-bold small text-dark" style="max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">User</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row g-3 mb-4">
+                <div class="col-4" onclick="filterStatus('all')"><div class="stat-card bg-grad-purple text-center"><h2 id="stat-total">0</h2><small>ทั้งหมด</small></div></div>
+                <div class="col-4" onclick="filterStatus('available')"><div class="stat-card bg-grad-green text-center"><h2 id="stat-avail">0</h2><small>ว่าง</small></div></div>
+                <div class="col-4" onclick="filterStatus('borrowed')"><div class="stat-card bg-grad-orange text-center"><h2 id="stat-borrow">0</h2><small>ถูกยืม</small></div></div>
+            </div>
+
+            <div class="d-flex gap-2 mb-3">
+                <div class="input-group shadow-soft rounded-pill overflow-hidden border-0 bg-white" style="flex: 1;">
+                    <span class="input-group-text bg-white border-0 ps-3 text-muted"><i class="bi bi-search"></i></span>
+                    <input type="text" id="search-box" class="form-control border-0 shadow-none" placeholder="ค้นหา..." onkeyup="renderGrid()">
+                </div>
+                <button class="btn btn-white bg-white border shadow-soft rounded-circle" style="width:46px; height:46px;" onclick="filterMyItems()" title="ของที่ฉันยืม"><i class="bi bi-person-check-fill text-primary"></i></button>
+                <button class="btn btn-white bg-white border shadow-soft rounded-circle" style="width:46px; height:46px;" onclick="openScanner()"><i class="bi bi-qr-code-scan text-dark"></i></button>
+                <button id="btn-add-item" class="btn btn-main rounded-circle p-0 hidden" style="width:46px; height:46px;" onclick="openAddModal()"><i class="bi bi-plus-lg fs-5"></i></button>
+            </div>
+
+            <div class="chip-container mb-4">
+                <button class="chip-btn active" onclick="filterCat('all', this)">ทั้งหมด</button>
+                <button class="chip-btn" onclick="filterCat('bi-laptop', this)">💻 ไอที</button>
+                <button class="chip-btn" onclick="filterCat('bi-broadcast', this)">📻 วิทยุ</button>
+                <button class="chip-btn" onclick="filterCat('bi-tools', this)">🛠️ เครื่องมือ</button>
+                <button class="chip-btn" onclick="filterCat('bi-car-front', this)">🚗 ยานพาหนะ</button>
+            </div>
+
+            <div id="items-grid" class="row g-3 pb-5"></div>
+        </div>
+
+        <div class="fab-container">
+            <button id="fab-return-batch" class="fab-btn fab-return hidden" onclick="confirmBatchReturn()">
+                <i class="bi bi-check-lg"></i>
+                <div id="return-count" class="cart-badge">0</div>
+            </button>
+            <button id="fab-borrow-cart" class="fab-btn fab-borrow" onclick="openCartModal()">
+                <i class="bi bi-basket2-fill"></i>
+                <div id="cart-count" class="cart-badge hidden">0</div>
+            </button>
+        </div>
+    </div>
+
+    <div class="modal fade" id="addModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-xxl p-4">
+                <h5 class="fw-bold mb-3 text-center">เพิ่มครุภัณฑ์ใหม่</h5>
+                <div class="text-center mb-3">
+                    <div class="rounded-4 d-flex align-items-center justify-content-center mx-auto mb-2 overflow-hidden shadow-sm" style="width:100px; height:100px; background:#f1f5f9; border:2px dashed #cbd5e1; cursor:pointer;" onclick="document.getElementById('new-img-file').click()">
+                        <img id="preview-img" style="width:100%; height:100%; object-fit:cover; display:none;">
+                        <div id="preview-placeholder" class="text-muted small"><i class="bi bi-camera-fill fs-3"></i><br>รูปภาพ</div>
+                    </div>
+                    <input type="file" id="new-img-file" hidden accept="image/*" onchange="previewImage(this)">
+                    <input type="hidden" id="new-img-base64">
+                </div>
+                <div class="d-flex flex-column gap-3">
+                    <div class="input-group">
+                        <input id="new-id" class="form-control form-control-modern bg-light border-0" placeholder="Serial No.">
+                        <button class="btn btn-light border-0 bg-light text-primary ps-3" onclick="document.getElementById('ocr-input').click()"><i class="bi bi-camera-fill"></i></button>
+                    </div>
+                    <input type="file" id="ocr-input" hidden accept="image/*" onchange="runOCR(this)">
+                    <input id="new-name" class="form-control-modern bg-light border-0" placeholder="ชื่อรายการ">
+                    <select id="new-icon" class="form-control-modern bg-light border-0 form-select">
+                        <option value="bi-broadcast">วิทยุสื่อสาร</option><option value="bi-laptop">ไอที</option>
+                        <option value="bi-tools">เครื่องมือ</option><option value="bi-car-front">ยานพาหนะ</option>
+                    </select>
+                </div>
+                <button class="btn-main mt-4" onclick="addItem()">บันทึก</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="cartModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-scrollable modal-fullscreen-sm-down">
+            <div class="modal-content border-0 rounded-xxl">
+                <div class="modal-header border-0 pb-0"><h5 class="fw-bold">🛒 ตะกร้าเบิกของ</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <div id="cart-list" class="d-flex flex-column gap-2 mb-4"></div>
+                    <div id="cart-empty" class="text-center py-5 text-muted opacity-50"><i class="bi bi-basket fs-1"></i><br>ว่างเปล่า</div>
+                    <div id="checkout-form" class="hidden bg-light p-4 rounded-xl border border-dashed">
+                        <h6 class="fw-bold mb-3 text-primary">รายละเอียดงาน</h6>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="small text-muted fw-bold mb-1">กำหนดส่งคืน <span class="req">*</span></label>
+                                <input type="date" id="cart-date" class="form-control border-0 shadow-sm p-2">
+                            </div>
+                            <div class="col-12">
+                                <label class="small text-muted fw-bold mb-1">ชื่องาน / โครงการ <span class="req">*</span></label>
+                                <input type="text" id="cart-project" class="form-control border-0 shadow-sm p-2" placeholder="ระบุชื่องาน...">
+                            </div>
+                            <div class="col-12">
+                                <label class="small text-muted fw-bold mb-1">สถานที่ใช้งาน <span class="req">*</span></label>
+                                <input type="text" id="cart-location" class="form-control border-0 shadow-sm p-2" placeholder="ระบุสถานที่...">
+                            </div>
+                            <div class="col-12">
+                                <label class="small text-muted fw-bold mb-1">หมายเหตุ</label>
+                                <input type="text" id="cart-note" class="form-control border-0 shadow-sm p-2" placeholder="-">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-3"><button class="btn btn-main py-3" onclick="confirmCheckout()">ยืนยันการเบิก</button></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="profileModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-xxl p-4 text-center">
+                <div id="profile-avatar-preview" class="user-avatar-lg mb-3 mx-auto" style="width:80px; height:80px;"></div>
+                <h5 class="fw-bold mb-0" id="profile-name">-</h5>
+                <span class="badge bg-light text-dark border mb-3" id="profile-role">-</span>
+                <div class="text-start bg-light p-3 rounded-xl mb-4 border">
+                    <div class="d-flex justify-content-between mb-2"><small class="text-muted">ID</small><span class="fw-bold" id="profile-emp-id">-</span></div>
+                    <div class="d-flex justify-content-between mb-2"><small class="text-muted">แผนก</small><span class="fw-bold" id="profile-dept">-</span></div>
+                    <div class="d-flex justify-content-between"><small class="text-muted">โทร</small><span class="fw-bold" id="profile-phone">-</span></div>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-light flex-grow-1 border" onclick="editProfile()">แก้ไข</button>
+                    <button class="btn btn-outline-danger flex-grow-1" onclick="logout()">ออกจากระบบ</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="editProfileModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-xxl p-4">
+                <h5 class="fw-bold mb-4 text-center">แก้ไขข้อมูล</h5>
+                <div class="text-center mb-4"><div class="d-flex justify-content-center gap-2 flex-wrap" id="edit-avatar-list"></div><input type="hidden" id="edit-avatar-val"></div>
+                <div class="d-flex flex-column gap-2">
+                    <input id="edit-name" class="form-control-modern form-control" placeholder="ชื่อ-นามสกุล">
+                    <input id="edit-phone" class="form-control-modern form-control" placeholder="เบอร์โทร">
+                    <input id="edit-emp-id" class="form-control-modern form-control" placeholder="รหัสพนักงาน">
+                </div>
+                <button class="btn-main mt-4" onclick="saveProfile()">บันทึก</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="scannerModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content rounded-xl overflow-hidden"><div id="reader"></div><button class="btn btn-light rounded-0 py-3" data-bs-dismiss="modal">ปิดกล้อง</button></div></div></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, set, update, onValue, push, remove, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        const app = initializeApp({ apiKey: "AIzaSyDHBp7xoh9TgIxIkbfv3ZGe-z8isnSJo1Q", databaseURL: "https://pea-asset-realtime-default-rtdb.asia-southeast1.firebasedatabase.app" });
+        window.db = getDatabase(app); window.dbRef = ref; window.dbSet = set; window.dbUpdate = update; window.dbPush = push; window.dbGet = get; 
+        onValue(ref(window.db, 'items'), s => { window.allItems = s.val() ? Object.values(s.val()) : []; renderGrid(); });
+    </script>
+
+    <script>
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwzR7p82amvf5YUeqm2PfhMXFqTmAkzMCedF3heXA6jPAZZ97LbjDISgG9YlmHSwYTm8Q/exec";
+        const AVATARS = [
+            {id:'boy', url:'https://cdn-icons-png.flaticon.com/512/4140/4140048.png'}, {id:'girl', url:'https://cdn-icons-png.flaticon.com/512/4140/4140047.png'},
+            {id:'admin', url:'https://cdn-icons-png.flaticon.com/512/2318/2318683.png', lock:true}
+        ];
+        const ADMIN_EMAILS = ["admin@pea.co.th", "tewit2547t@gmail.com"];
+
+        let currentUser = JSON.parse(localStorage.getItem('pea_sess'));
+        let cart = []; 
+        let returnCart = []; 
+        let filter = { cat: 'all', status: 'all', txt: '', my: false };
+
+        window.onload = () => {
+            renderAvatars();
+            if(currentUser) showMain(); else document.getElementById('page-login').classList.remove('hidden');
+        };
+
+        // --- IMAGE & OCR ---
+        window.previewImage = (input) => {
+            if (input.files && input.files[0]) {
+                var reader = new FileReader();
+                reader.onload = function (e) {
+                    document.getElementById('preview-img').src = e.target.result;
+                    document.getElementById('preview-img').style.display = 'block';
+                    document.getElementById('preview-placeholder').style.display = 'none';
+                    document.getElementById('new-img-base64').value = e.target.result;
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+        window.runOCR = (input) => {
+            Tesseract.recognize(input.files[0], 'eng').then(({data:{text}}) => {
+                document.getElementById('new-id').value = text.replace(/[^a-zA-Z0-9]/g, '');
+            });
+        }
+
+        // --- CORE: BORROW CART 🛒 ---
+        window.toggleCart = (id) => {
+            const idx = cart.indexOf(id);
+            if(idx > -1) cart.splice(idx, 1); else cart.push(id);
+            updateCartUI(); renderGrid();
+        };
+        window.updateCartUI = () => {
+            const count = document.getElementById('cart-count');
+            count.innerText = cart.length;
+            document.getElementById('fab-borrow-cart').classList.toggle('hidden', cart.length === 0 || returnCart.length > 0);
+            count.classList.toggle('hidden', cart.length === 0);
+        };
+
+        // --- CORE: RETURN CART (BATCH RETURN) 📦 ---
+        window.toggleReturn = (id) => {
+            const idx = returnCart.indexOf(id);
+            if(idx > -1) returnCart.splice(idx, 1); else returnCart.push(id);
+            updateReturnUI(); renderGrid();
+        };
+        window.updateReturnUI = () => {
+            const btn = document.getElementById('fab-return-batch');
+            const count = document.getElementById('return-count');
+            if (returnCart.length > 0) {
+                btn.classList.remove('hidden');
+                document.getElementById('fab-borrow-cart').classList.add('hidden');
+                count.innerText = returnCart.length;
+            } else {
+                btn.classList.add('hidden');
+                if (cart.length > 0) document.getElementById('fab-borrow-cart').classList.remove('hidden');
+            }
+        };
+        window.confirmBatchReturn = () => {
+            if(!confirm(`ยืนยันการคืนอุปกรณ์ ${returnCart.length} รายการ?`)) return;
+            
+            const updates = {};
+            returnCart.forEach(id => {
+                const item = window.allItems.find(i => i.id === id);
+                updates['items/' + id] = { ...item, status: 'available', due_date: null, borrower: null };
+                sendToSheet({ action: 'คืน', itemId: id, itemName: item.name, user: currentUser.name, dept: currentUser.dept, phone: currentUser.phone, note: 'คืนแล้ว (Batch)' });
+            });
+
+            window.dbUpdate(window.dbRef(window.db), updates).then(() => {
+                alert('คืนอุปกรณ์เรียบร้อย!');
+                returnCart = []; updateReturnUI();
+            });
+        };
+
+        // --- FILTER & GRID ---
+        window.filterCat = (c, b) => { filter.cat = c; filter.my = false; document.querySelectorAll('.chip-btn').forEach(x=>x.classList.remove('active')); b.classList.add('active'); renderGrid(); };
+        window.filterStatus = (s) => { filter.status = s; filter.my = false; renderGrid(); };
+        window.filterMyItems = () => { filter.my = !filter.my; renderGrid(); };
+        document.getElementById('search-box').addEventListener('keyup', (e) => { filter.txt = e.target.value.toLowerCase(); renderGrid(); });
+
+        window.renderGrid = () => {
+            const grid = document.getElementById('items-grid');
+            grid.innerHTML = '';
+            
+            let list = window.allItems.filter(i => 
+                (filter.cat === 'all' || i.icon === filter.cat) &&
+                (i.name.toLowerCase().includes(filter.txt) || i.id.includes(filter.txt))
+            );
+
+            if(filter.status === 'borrowed') list = list.filter(i => i.status === 'borrowed');
+            if(filter.status === 'available') list = list.filter(i => i.status === 'available');
+            if(filter.my) list = list.filter(i => i.status === 'borrowed' && i.borrower?.name === currentUser.name);
+
+            list.sort((a, b) => {
+                const getScore = (item) => {
+                    if(item.status === 'available') return 3;
+                    if(!item.due_date) return 2;
+                    const due = new Date(item.due_date).setHours(0,0,0,0);
+                    const today = new Date().setHours(0,0,0,0);
+                    return due < today ? 0 : 1; 
+                };
+                return getScore(a) - getScore(b);
+            });
+
+            document.getElementById('stat-total').innerText = window.allItems.length;
+            document.getElementById('stat-avail').innerText = window.allItems.filter(i=>i.status==='available').length;
+            document.getElementById('stat-borrow').innerText = window.allItems.filter(i=>i.status==='borrowed').length;
+
+            list.forEach(item => {
+                const isSelected = cart.includes(item.id);
+                const isReturning = returnCart.includes(item.id);
+                let statusBadge = '';
+                let actionBtn = '';
+                let cardColor = 'cat-other';
+                let cardClass = '';
+
+                if(item.icon.includes('laptop')) cardColor = 'cat-it';
+                else if(item.icon.includes('broadcast')) cardColor = 'cat-radio';
+                else if(item.icon.includes('tools')) cardColor = 'cat-tool';
+                else if(item.icon.includes('car')) cardColor = 'cat-car';
+
+                if(item.status === 'available') {
+                    statusBadge = `<span class="status-badge badge-avail"><i class="bi bi-circle-fill me-1" style="font-size:6px; vertical-align:middle;"></i>ว่าง</span>`;
+                    actionBtn = `<button class="btn btn-sm ${isSelected ? 'btn-danger' : 'btn-light text-primary'} rounded-pill w-100 fw-bold border" onclick="event.stopPropagation(); toggleCart('${item.id}')">${isSelected ? 'เอาออก' : 'เลือก'}</button>`;
+                } else {
+                    const b = item.borrower || {};
+                    const isLate = new Date(item.due_date) < new Date().setHours(0,0,0,0);
+                    const dateTxt = item.due_date ? formatDateToThai(item.due_date) : '-';
+                    statusBadge = isLate ? `<span class="status-badge badge-late">เกิน: ${dateTxt}</span>` : `<span class="status-badge badge-borrow">คืน: ${dateTxt}</span>`;
+                    
+                    const isOwner = b.email === currentUser.email;
+                    const isAdmin = ADMIN_EMAILS.includes(currentUser.email);
+                    
+                    if(isOwner || isAdmin) {
+                        if (isReturning) {
+                            actionBtn = `<button class="btn btn-sm btn-success text-white rounded-pill w-100 fw-bold shadow-sm" onclick="event.stopPropagation(); toggleReturn('${item.id}')"><i class="bi bi-check-lg me-1"></i>เลือกแล้ว</button>`;
+                            cardClass = 'selected-return';
+                        } else {
+                            actionBtn = `<button class="btn btn-sm btn-outline-success rounded-pill w-100 fw-bold" onclick="event.stopPropagation(); toggleReturn('${item.id}')">เลือกคืน</button>`;
+                        }
+                    } else {
+                        actionBtn = `<button class="btn btn-sm btn-light text-muted rounded-pill w-100" disabled><i class="bi bi-lock-fill"></i> ยืมโดย: ${b.name}</button>`;
+                    }
+                }
+
+                const imgDisplay = item.img ? `<img src="${item.img}" class="item-real-img">` : `<i class="bi ${item.icon} item-placeholder-icon text-secondary opacity-25"></i>`;
+
+                grid.innerHTML += `
+                <div class="col-12 col-md-6 col-lg-4 col-xl-3">
+                    <div class="item-card ${cardClass}">
+                        ${statusBadge}
+                        <div class="item-img-container">${imgDisplay}</div>
+                        <div class="cat-line ${cardColor}"></div>
+                        <div class="p-3">
+                            <h6 class="fw-bold mb-1 text-truncate">${item.name}</h6>
+                            <small class="text-muted d-block mb-3 font-monospace" style="font-size:0.8rem">${item.id}</small>
+                            ${item.status === 'borrowed' ? `
+                                <div class="d-flex align-items-center bg-light p-2 rounded-3 mb-3 border">
+                                    <div class="user-avatar-sm me-2" style="background-image:url('${getAvatarUrl(item.borrower?.avatar)}')"></div>
+                                    <div class="text-truncate" style="flex:1;">
+                                        <small class="fw-bold d-block text-dark lh-1">${item.borrower?.name}</small>
+                                        <small class="text-muted" style="font-size:0.7rem">${item.borrower?.project || '-'}</small>
+                                    </div>
+                                </div>
+                            ` : ''}
+                            ${actionBtn}
+                        </div>
+                    </div>
+                </div>`;
+            });
+        };
+
+        // --- AUTH & HELPERS ---
+        window.doLogin = () => {
+            const e = document.getElementById('login-email').value;
+            const p = document.getElementById('login-pass').value;
+            const btn = document.getElementById('btn-login-action');
+            if (!window.dbGet) { alert('Connecting...'); return; }
+            btn.innerText = 'กำลังตรวจสอบ...'; btn.disabled = true;
+            window.dbGet(window.dbRef(window.db, 'users')).then(s => {
+                const u = Object.values(s.val()||{}).find(x => x.email===e && x.pass===p);
+                if(u) { currentUser=u; localStorage.setItem('pea_sess', JSON.stringify(u)); showMain(); } 
+                else { alert('รหัสผิด'); btn.innerText='เข้าสู่ระบบ'; btn.disabled=false; }
+            });
+        }
+
+        window.showMain = () => {
+            document.getElementById('page-login').classList.add('hidden');
+            document.getElementById('page-main').classList.remove('hidden');
+            document.getElementById('nav-user').innerText = currentUser.name;
+            document.getElementById('nav-avatar').style.backgroundImage = `url('${getAvatarUrl(currentUser.avatar)}')`;
+            if(ADMIN_EMAILS.includes(currentUser.email)) {
+                document.getElementById('btn-add-item').classList.remove('hidden');
+            }
+        };
+        
+        window.openAddModal = () => new bootstrap.Modal(document.getElementById('addModal')).show();
+        
+        window.addItem = () => {
+            const id = document.getElementById('new-id').value;
+            if(id) window.dbSet(window.dbRef(window.db, 'items/'+id), {
+                id, name: document.getElementById('new-name').value, 
+                icon: document.getElementById('new-icon').value, status: 'available',
+                img: document.getElementById('new-img-base64').value
+            }).then(()=> { 
+                alert('บันทึกเรียบร้อย');
+                bootstrap.Modal.getInstance(document.getElementById('addModal')).hide();
+                location.reload();
+            });
+        };
+
+        function sendToSheet(d) { fetch(GOOGLE_SCRIPT_URL, {method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d)}); }
+        function getAvatarUrl(id) { return (AVATARS.find(a=>a.id===id)||AVATARS[0]).url; }
+        window.logout = () => { localStorage.removeItem('pea_sess'); location.reload(); };
+        
+        window.openProfile = () => {
+            document.getElementById('profile-avatar-preview').style.backgroundImage = `url('${getAvatarUrl(currentUser.avatar)}')`;
+            document.getElementById('profile-name').innerText = currentUser.name;
+            document.getElementById('profile-role').innerText = `${currentUser.branch}`;
+            document.getElementById('profile-emp-id').innerText = currentUser.id || "-";
+            document.getElementById('profile-dept').innerText = currentUser.dept || "-";
+            document.getElementById('profile-phone').innerText = currentUser.phone;
+            new bootstrap.Modal(document.getElementById('profileModal')).show();
+        };
+        window.editProfile = () => {
+            bootstrap.Modal.getInstance(document.getElementById('profileModal')).hide();
+            document.getElementById('edit-name').value = currentUser.name;
+            document.getElementById('edit-phone').value = currentUser.phone;
+            document.getElementById('edit-emp-id').value = currentUser.id || "";
+            renderAvatars('edit');
+            setTimeout(() => window.selectAv(currentUser.avatar || 'boy'), 50);
+            new bootstrap.Modal(document.getElementById('editProfileModal')).show();
+        };
+        window.saveProfile = () => {
+            const name = document.getElementById('edit-name').value;
+            const phone = document.getElementById('edit-phone').value;
+            const id = document.getElementById('edit-emp-id').value;
+            const avatar = document.getElementById('reg-avatar-val').value;
+            window.dbGet(window.dbRef(window.db, 'users')).then(s => {
+                const users = s.val();
+                const key = Object.keys(users).find(k => users[k].email === currentUser.email);
+                if(key) {
+                    const updateData = { name, phone, id, avatar };
+                    window.dbUpdate(window.dbRef(window.db, 'users/'+key), updateData).then(() => {
+                        currentUser = {...currentUser, ...updateData};
+                        localStorage.setItem('pea_sess', JSON.stringify(currentUser));
+                        bootstrap.Modal.getInstance(document.getElementById('editProfileModal')).hide();
+                        showMain();
+                    });
+                }
+            });
+        };
+        
+        window.renderAvatars = (mode) => {
+            const container = mode === 'edit' ? document.getElementById('edit-avatar-list') : document.getElementById('reg-avatar-list');
+            container.innerHTML = AVATARS.filter(a=>!a.lock).map(a=>
+                `<div class="avatar-option" style="background-image:url('${a.url}')" onclick="selectAv('${a.id}')" id="av-${a.id}"></div>`
+            ).join('');
+        };
+        window.selectAv = (id) => {
+            document.querySelectorAll('.avatar-option').forEach(x=>x.classList.remove('selected'));
+            const el = document.getElementById('av-'+id); if(el) el.classList.add('selected');
+            document.getElementById('reg-avatar-val').value = id;
+        };
+        window.goRegister = () => { document.getElementById('page-login').classList.add('hidden'); document.getElementById('page-register').classList.remove('hidden'); };
+        window.goLogin = () => { document.getElementById('page-register').classList.add('hidden'); document.getElementById('page-login').classList.remove('hidden'); };
+        window.doRegister = () => {
+            const u = {
+                id: document.getElementById('reg-id').value, name: document.getElementById('reg-name').value,
+                phone: document.getElementById('reg-phone').value, branch: document.getElementById('reg-branch').value,
+                email: document.getElementById('reg-email').value, pass: document.getElementById('reg-pass').value,
+                avatar: document.getElementById('reg-avatar-val').value, dept: document.getElementById('reg-dept').value
+            };
+            if(u.email) window.dbPush(window.dbRef(window.db, 'users'), u).then(()=> { currentUser=u; localStorage.setItem('pea_sess', JSON.stringify(u)); showMain(); });
+        };
+        function formatDateToThai(dateString) { 
+            if (!dateString) return "-"; 
+            const p = dateString.split('-'); 
+            return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : dateString; 
+        }
+        window.openScanner = () => { const modal = new bootstrap.Modal(document.getElementById('scannerModal')); modal.show(); setTimeout(() => { if(html5QrcodeScanner) html5QrcodeScanner.clear(); html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 }, false); html5QrcodeScanner.render((txt)=>{ if(html5QrcodeScanner) html5QrcodeScanner.clear(); bootstrap.Modal.getInstance(document.getElementById('scannerModal')).hide(); document.getElementById('search-box').value = txt; renderGrid(); }, ()=>{}); }, 500); }
+        let html5QrcodeScanner = null;
+
+        // --- MODALS ---
+        window.openCartModal = () => {
+            const list = document.getElementById('cart-list');
+            const form = document.getElementById('checkout-form');
+            list.innerHTML = '';
+
+            if(cart.length === 0) {
+                document.getElementById('cart-empty').classList.remove('hidden');
+                form.classList.add('hidden');
+            } else {
+                document.getElementById('cart-empty').classList.add('hidden');
+                form.classList.remove('hidden');
+                document.getElementById('cart-date').min = new Date().toISOString().split('T')[0];
+
+                cart.forEach(id => {
+                    const item = window.allItems.find(i => i.id === id);
+                    if(item) {
+                        list.innerHTML += `
+                        <div class="d-flex align-items-center justify-content-between p-3 bg-white rounded-xl shadow-sm border">
+                            <div class="d-flex align-items-center">
+                                ${item.img ? `<div style="width:50px;height:50px;background:url('${item.img}') center/cover; border-radius:10px; margin-right:15px;"></div>` : `<div class="bg-light rounded-3 p-2 me-3"><i class="bi ${item.icon} fs-2 text-primary"></i></div>`}
+                                <div><div class="fw-bold">${item.name}</div><small class="text-muted font-monospace">${item.id}</small></div>
+                            </div>
+                            <button class="btn btn-light text-danger rounded-circle" onclick="toggleCart('${item.id}'); openCartModal()"><i class="bi bi-trash"></i></button>
+                        </div>`;
+                    }
+                });
+            }
+            new bootstrap.Modal(document.getElementById('cartModal')).show();
+        };
+
+        // 🔥 CONFIRM CHECKOUT WITH VALIDATION
+        window.confirmCheckout = () => {
+            const date = document.getElementById('cart-date').value;
+            const project = document.getElementById('cart-project').value.trim();
+            const loc = document.getElementById('cart-location').value.trim();
+            const note = document.getElementById('cart-note').value.trim();
+
+            if(cart.length === 0) return alert("ตะกร้าว่างเปล่า");
+
+            // ⚠️ VALIDATION CHECK
+            let missing = [];
+            if (!date) missing.push("กำหนดส่งคืน");
+            if (!project) missing.push("ชื่องาน / โครงการ");
+            if (!loc) missing.push("สถานที่ใช้งาน");
+
+            if (missing.length > 0) {
+                return alert("กรุณากรอกข้อมูลให้ครบถ้วน:\n- " + missing.join("\n- "));
+            }
+
+            const updates = {};
+            cart.forEach(id => {
+                const item = window.allItems.find(i => i.id === id);
+                updates['items/' + id] = {
+                    ...item, status: 'borrowed', due_date: date,
+                    borrower: {
+                        name: currentUser.name, empId: currentUser.empId||'-', 
+                        phone: currentUser.phone, dept: currentUser.dept,
+                        project: project, location: loc, note: note, avatar: currentUser.avatar
+                    }
+                };
+                sendToSheet({ action: 'ยืม', itemId: id, itemName: item.name, user: currentUser.name, dept: currentUser.dept, phone: currentUser.phone, project: project, location: loc, note: note, dueDate: date });
+            });
+
+            window.dbUpdate(window.dbRef(window.db), updates).then(() => {
+                alert(`เบิกสำเร็จ ${cart.length} รายการ`);
+                cart = []; updateCartUI();
+                bootstrap.Modal.getInstance(document.getElementById('cartModal')).hide();
+            });
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
